@@ -100,37 +100,6 @@ app.post('/serverCheck', (req, res) => {
     });
 });
 
-/*save new match up post to dbs*/
-//RANDY April 1 2017 make query right changes
-app.post('/savePost', (req, res) => {
-    var saved = false,
-        post = req.body,
-        times = formatTimeAndDate(post.time),
-        obj_json = {
-            time: times.time,
-            date: times.date,
-            description: post.des,
-            place: post.meetplace + '|' + post.gym + '|' + post.branch,
-            type: post.type,
-            maxppl: post.maxppl,
-            ppl: [],
-            postTime: post.postTime
-        },
-        obj = JSON.stringify(obj_json);
-    Users.findOneAndUpdate({
-        _id: post.id
-    }, {
-        $push: {
-            currentPost: obj
-        }
-    }, (err, data) => {
-        if (err) throw err;
-        if (data)
-            res.json(obj_json);
-        else res.send(false);
-    });
-});
-
 /*update user persional infomation*/
 app.post('/updatePersonalInfo', (req, res) => {
     var obj = {
@@ -265,7 +234,7 @@ function authUser(obj, pass, res) {
         }
 
         if (!res) return;
-        else console.log('logged in')
+        if(token) console.log('logged in');
         res.json({
             name: name,
             status: status,
