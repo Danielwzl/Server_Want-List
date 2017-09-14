@@ -265,6 +265,7 @@ function authUser(obj, pass, res) {
         }
 
         if (!res) return;
+        else console.log('logged in')
         res.json({
             name: name,
             status: status,
