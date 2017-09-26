@@ -5,7 +5,7 @@ var exp = require('express'),
     jwt = require('jsonwebtoken'),
     config = require('./config.js'),
     nodemailer = require('nodemailer'),
-    Users = require('./models/users.js');
+    Users = require('./models/authentication.js');
 
 app.use(exp.static('public'));
 
@@ -13,11 +13,14 @@ app.use(bp.urlencoded({
     extended: false
 }));
 
+
+var userExist,
+    userSession = {};
+
 //sign up
 //login
 //forget password
 //send user session token
-
 
 
 /*start sever in 3002*/
@@ -47,13 +50,13 @@ app.get('/', function (req, res) {
 
 /*deal with user login*/
 app.post('/serverLogin', (req, res) => {
-    var name = req.body.name,
-        pass = req.body.pass;
-    if (name.match(/\w+\@\w+(\.\w+)+/)) obj = {
-        email: name //it will check user use either email or username
+    var nick_name = req.body.nick_name,
+        pass = req.body.password;
+    if (nick_name.match(/\w+\@\w+(\.\w+)+/)) obj = {
+        email: nick_name //it will check user use either email or username
     };
     else obj = {
-        name: name
+        nick_name: nick_name
     };
     authUser(obj, pass, res); //auth user
 });
@@ -61,10 +64,9 @@ app.post('/serverLogin', (req, res) => {
 /*sign up for new user*/
 app.post('/newUser', (req, res) => {
     var usr = new Users({
-        name: req.body.name,
-        pass: req.body.pass,
+        nick_name: req.body.nick_name,
         email: req.body.email,
-        rName: {
+        full_name: {
             lName: req.body.lName,
             fName: req.body.fName
         },
@@ -77,14 +79,37 @@ app.post('/newUser', (req, res) => {
             pcode: req.body.pcode
         },
         phone: req.body.phone,
-        token: generateToken(req.body.name, req.body.pass)
+        token: generateToken(req.body.nick_name, req.body.password)
     });
-    usr.save((err, data) => {
-        console.log('data saved');
-        res.json({
-            name: data.name,
-            token: data._id //as their new sid
-        });
+
+    var exist = userExists(req.body.phone);
+
+    exist.then(function () {
+        if (!userExist) {
+            usr.save((err, data) => {
+                console.log('new user here');
+                userSession[data._id] = {
+                    name: data.nick_name
+                };
+                res.json({
+                    name: data.nick_name,
+                    token: data._id //as their new sid
+                });
+            });
+        }
+    });
+});
+
+app.post('/logout/:id', function (req, res) {
+    var flag = false;
+    if (userSession[req.params.id]) { //if there is session and user hit logout button
+        delete userSession[req.params.id]; //delete from session array
+        console.log(userSession);
+        console.log(req.params.id + ": logout");
+        flag = true;
+    }
+    res.json({
+        logout: flag
     });
 });
 
@@ -116,7 +141,7 @@ app.post('/updatePersonalInfo', (req, res) => {
             pcode: req.body.pcode
         },
         phone: req.body.phone
-    }
+    };
 
     Users.findOneAndUpdate({
         name: req.body.name
@@ -157,7 +182,7 @@ app.post('/emailForPsw', (req, res) => {
                 let mailOptions = {
                     from: '"(noreply)password reset" <gymmatchupmru@gmail.com>', // sender address
                     to: data.email, // list of receivers
-                    subject: 'Gym match up reset password', // Subject line
+                    subject: 'reset password', // Subject line
                     text: 'click link to complete reset password', // plain text body
                     html: '<b>click link to complete reset password:</b> <a href = "http://localhost:3000/resetpsw/' + req.body.sid + '">reset password</a>'
                 };
@@ -179,7 +204,7 @@ app.post('/emailForPsw', (req, res) => {
 
 /*for reset or update password or username(account info)*/
 app.post('/serverUpdate', (req, res) => {
-    if (req.body.type == 'resetPass') {
+    if (req.body.type === 'resetPass') {
         Users.findOne({
                 email: req.body.email || req.body.name, //different key all refer to email, this is one solution for bad structure 
             },
@@ -215,6 +240,39 @@ app.post('/serverUpdate', (req, res) => {
     }
 });
 
+app.post('/searchUser', (req, res) => {
+    var type = req.body.type,
+        value = req.body.value,
+        obj;
+    switch (type) {
+        case 'nick_name' :
+            obj = {nick_name: value};
+            break;
+        case 'name':
+            obj = {name: value};
+            break;
+        case 'phone':
+            obj = {phone: value};
+            break;
+        case 'email':
+            obj = {email: value};
+            break;
+        case 'dob':
+            obj = {dob: value};
+            break;
+    }
+
+    if(!obj) return res.json({res: null});
+    Users.find(obj, 'nick_name, full_name, dob, avatar', (err, data)=>{
+        if(err) throw err;
+        if(data){
+            return res.json({res: data});
+        }
+        return res.json({res: null});
+    });
+});
+
+app.get('/bestGiftSet', mostDesireGiftList);
 
 /*check username and password by using token*/
 function authUser(obj, pass, res) {
@@ -226,7 +284,7 @@ function authUser(obj, pass, res) {
             console.log('user not exists');
         } else {
             token = jwt.decode(data.token);
-            if (pass == token.pass) {
+            if (pass === token.pass) {
                 status = 'ok';
                 token = data._id;
                 name = data.name;
@@ -234,7 +292,13 @@ function authUser(obj, pass, res) {
         }
 
         if (!res) return;
-        if(token) console.log('logged in');
+        if (token) {
+            userSession[data._id] = { //use token as sessionID
+                name: data.nick_name
+            };
+            console.log(userSession);
+            console.log('logged in');
+        }
         res.json({
             name: name,
             status: status,
@@ -246,7 +310,7 @@ function authUser(obj, pass, res) {
 /*making a new token*/
 function generateToken(name, pass) {
     return jwt.sign({
-        name: name,
+        nick_name: name,
         pass: pass
     }, 'secret', {
         expiresIn: 60 * 60
@@ -260,5 +324,94 @@ function formatTimeAndDate(time) {
         date: data[0],
         time: data[1]
     }
+}
+
+function userExists(phone) {
+    return Users.findOne({phone: phone}, '_id', (err, data) => {
+        if (err) throw err;
+        userExist = data !== null;
+    });
+}
+
+/**
+ * if user select couples of item and wanna figure out what is the lowest price which can get
+ * most-desired list of gift of his friend
+ * @param req
+ * @param res
+ * @returns {*}
+ */
+function mostDesireGiftList(req, res){
+    if(!req.headers.items || !req.headers.cap) return res.json({opt: null});
+    var name,
+        item,
+        dpKey,
+        tempTotal,
+        prevItemValue,
+        ans = [],
+        max = 0,
+        dpValue,
+        items = req.headers.items;
+        cap = req.headers.cap;
+        dp = [];
+
+    //initial ary
+    for (var i = cap; i >= 0; i--) {
+        dp[i] = {
+            0: []
+        };
+    }
+    //compressed dp with storing optimization sets
+    //dp ary has optimized value along with its' sets
+    for (var i = 0, numOfItem = items.length; i < numOfItem; i++) {
+        name = Object.keys(items[i])[0];
+        item = items[i][name];
+        for (var j = cap; j >= item[1]; j--) {
+            dpKey = ~~Object.keys(dp[j])[0]; //target value
+            prevItemValue = ~~Object.keys(dp[j - item[1]])[0]; //if w is 8, it should find max value of w 2 (10-8=2), total w = 10
+            tempTotal = prevItemValue + item[0]; //get the rest biggest value
+            if (dpKey < tempTotal) {
+                delete dp[j][dpKey];
+                dpKey = tempTotal; //get current total of this set
+                dpValue = []; //empty temp ary
+                dpValue.push(name); //put current set into set ary, concat with cap [target - current] elements
+                dpValue = dpValue.concat(dp[j - item[1]][prevItemValue]);
+                //console.log(i + ", " + j + ", " + (j - item[1]) + " : " + dp[j - item[1]][prevItemValue]);
+                dp[j][dpKey] = dpValue; //assign all set back to dp ary
+            }
+        }
+    }
+
+    for (var i = 0, len = dp.length; i < len; i++) {
+        if (max < ~~Object.keys(dp[i])[0]) {
+            max = ~~Object.keys(dp[i])[0];
+        }
+    }
+    for (var i = 0, len = dp.length; i < len; i++) {
+        if (max === ~~Object.keys(dp[i])[0]) {
+            ans.push(dp[i]);
+        }
+    }
+    res.json({opt: ans});
+}
+
+/**
+ * TODO this function will tell user which item is most wanted by all users etc
+ * @param req
+ * @param res
+ */
+function analysisData(req, res){
 
 }
+
+function postDesiredGift(req, res){
+
+}
+
+function postReceivedGift(req,res){
+
+}
+
+function leftCommentOnPost(req, res){
+
+}
+

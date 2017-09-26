@@ -1,4 +1,4 @@
 module.exports = {
-    'secret': 'gymmatchup',
-    'database': 'mongodb://admin:zwang719@ds127260.mlab.com:27260/gmudb'
-}
+    'secret': 'authentication',
+    'database': 'mongodb://admin:zwang719@ds135444.mlab.com:35444/auth'
+};
