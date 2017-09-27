@@ -3,7 +3,6 @@
  */
 var mongoose = require("mongoose");
 var timestamps = require('mongoose-timestamp');
-// var Schema = mongoose.Schema;
 
 var Authentications = new mongoose.Schema({
     nick_name: String,
@@ -24,13 +23,13 @@ var Authentications = new mongoose.Schema({
     dob: Date,
     phone: String,
     token: String,
-    post: {
+    post: [{
         image: String,
         title: String,
         desc: String,
         desire_level: Number,
         cost_level: Number
-    }
+    }]
 });
 
 Authentications.plugin(timestamps);

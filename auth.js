@@ -205,6 +205,7 @@ app.post('/emailForPsw', (req, res) => {
 /*for reset or update password or username(account info)*/
 app.post('/serverUpdate', (req, res) => {
     if (req.body.type === 'resetPass') {
+        ``
         Users.findOne({
                 email: req.body.email || req.body.name, //different key all refer to email, this is one solution for bad structure 
             },
@@ -262,10 +263,10 @@ app.post('/searchUser', (req, res) => {
             break;
     }
 
-    if(!obj) return res.json({res: null});
-    Users.find(obj, 'nick_name, full_name, dob, avatar', (err, data)=>{
-        if(err) throw err;
-        if(data){
+    if (!obj) return res.json({res: null});
+    Users.find(obj, 'nick_name, full_name, dob, avatar', (err, data) => {
+        if (err) throw err;
+        if (data) {
             return res.json({res: data});
         }
         return res.json({res: null});
@@ -273,6 +274,7 @@ app.post('/searchUser', (req, res) => {
 });
 
 app.get('/bestGiftSet', mostDesireGiftList);
+app.post('/newDesireGift', postDesiredGift);
 
 /*check username and password by using token*/
 function authUser(obj, pass, res) {
@@ -340,8 +342,8 @@ function userExists(phone) {
  * @param res
  * @returns {*}
  */
-function mostDesireGiftList(req, res){
-    if(!req.headers.items || !req.headers.cap) return res.json({opt: null});
+function mostDesireGiftList(req, res) {
+    if (!req.headers.items || !req.headers.cap) return res.json({opt: null});
     var name,
         item,
         dpKey,
@@ -351,8 +353,8 @@ function mostDesireGiftList(req, res){
         max = 0,
         dpValue,
         items = req.headers.items;
-        cap = req.headers.cap;
-        dp = [];
+    cap = req.headers.cap;
+    dp = [];
 
     //initial ary
     for (var i = cap; i >= 0; i--) {
@@ -399,19 +401,38 @@ function mostDesireGiftList(req, res){
  * @param req
  * @param res
  */
-function analysisData(req, res){
+function analysisData(req, res) {
 
 }
 
-function postDesiredGift(req, res){
+function postDesiredGift(req, res) {
+    var body = req.body;
+    var obj = {
+            image: body.image,
+            title: body.title,
+            desc: body.desc,
+            desire_level: body.desire_level,
+            cost_level: body.cost_level
+        };
+
+    Users.findOneAndUpdate({id: body.id}, {"$push": {"post": obj}}, (err, data) => {
+        if (err) throw err;
+        //TODO test the if data back
+        console.log(data);
+        res.json([{status: 'ok'}]);
+    });
+
 
 }
 
-function postReceivedGift(req,res){
+//TODO maybe not use this function
+function postReceivedGift(req, res) {
 
 }
 
-function leftCommentOnPost(req, res){
+//TODO maybe not use this function
+//TODO should be anynomise
+function leftCommentOnPost(req, res) {
 
 }
 
