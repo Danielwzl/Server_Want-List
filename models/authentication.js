@@ -28,7 +28,9 @@ var Authentications = new mongoose.Schema({
         title: String,
         desc: String,
         desire_level: Number,
-        cost_level: Number
+        cost_level: Number,
+        isMarked: Boolean,
+        createdAt: Date
     }]
 });
 

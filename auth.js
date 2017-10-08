@@ -45,8 +45,20 @@ let transporter = nodemailer.createTransport({
 
 /*debug page wasted*/
 app.get('/', function (req, res) {
-    res.send('hello');
+    console.log("requested");
+    res.json({res: 'hello'});
 });
+
+app.get('/test', function (req, res) {
+    console.log("request"  + req.query.id + ", " + req.query.name);
+    res.json({res: {a: 1, b: "dan"}});
+});
+
+app.post('/post', function (req, res) {
+    console.log("request: "  + req.body.id + " , " + req.body.name);
+    res.json({res: {a: 1, b: "dan"}});
+});
+/*debug page wasted*/
 
 /*deal with user login*/
 app.post('/serverLogin', (req, res) => {
@@ -70,15 +82,16 @@ app.post('/newUser', (req, res) => {
             lName: req.body.lName,
             fName: req.body.fName
         },
-        address: {
-            unit: req.body.unit,
-            street: req.body.street,
-            city: req.body.city,
-            province: req.body.province,
-            country: req.body.country,
-            pcode: req.body.pcode
-        },
+//        address: {
+//            unit: req.body.unit,
+//            street: req.body.street,
+//            city: req.body.city,
+//            province: req.body.province,
+//            country: req.body.country,
+//            pcode: req.body.pcode
+//        },
         phone: req.body.phone,
+        dob: req.body.dob,
         token: generateToken(req.body.nick_name, req.body.password)
     });
 
@@ -117,7 +130,7 @@ app.post('/logout/:id', function (req, res) {
 app.post('/serverCheck', (req, res) => {
     var exist = false;
     Users.findOne(req.body, (err, data) => {
-        if (err) throw err;
+        if (err) return res.send(null);
         if (data) exist = true;
         res.json({
             exist: exist
@@ -146,7 +159,7 @@ app.post('/updatePersonalInfo', (req, res) => {
     Users.findOneAndUpdate({
         name: req.body.name
     }, obj, (err, data) => {
-        if (err) throw err;
+        if (err) return res.send(null);
 
         if (data) res.json({
             done: true
@@ -161,7 +174,7 @@ app.post('/updatePersonalInfo', (req, res) => {
 app.post('/getUserProfile', (req, res) => {
     if (!req.body._id) return;
     Users.findOne(req.body, '-_id -__v', (err, data) => {
-        if (err) throw err;
+        if (err) return res.send(null);
         res.send(data);
     });
 });
@@ -171,7 +184,7 @@ app.post('/emailForPsw', (req, res) => {
     Users.findOne({
         email: req.body.email
     }, (err, data) => {
-        if (err) throw err;
+        if (err)return res.send(null);
         else {
             if (!data) {
                 res.json({
@@ -211,7 +224,7 @@ app.post('/serverUpdate', (req, res) => {
             },
             'name token pass', (err, data) => {
                 if (err) {
-                    throw err;
+                    return res.send(null);
                 } else {
                     if (!data) return;
                     var name = req.body.newName || data.name, //get name for making token
@@ -224,7 +237,7 @@ app.post('/serverUpdate', (req, res) => {
                             pass: req.body.newPass || data.pass,
                             token: token
                         }, (err, data) => {
-                            if (err) throw err;
+                            if (err) return res.send(null);
                             else {
                                 if (!data) {
                                     console.log('no user found');
@@ -265,7 +278,7 @@ app.post('/searchUser', (req, res) => {
 
     if (!obj) return res.json({res: null});
     Users.find(obj, 'nick_name, full_name, dob, avatar', (err, data) => {
-        if (err) throw err;
+        if (err) return res.send(null);
         if (data) {
             return res.json({res: data});
         }
@@ -281,7 +294,7 @@ function authUser(obj, pass, res) {
     var status = 'fail',
         token, name;
     Users.findOne(obj, (err, data) => {
-        if (err) throw err;
+        if (err) return res.send(null);
         if (!data) {
             console.log('user not exists');
         } else {
@@ -330,7 +343,7 @@ function formatTimeAndDate(time) {
 
 function userExists(phone) {
     return Users.findOne({phone: phone}, '_id', (err, data) => {
-        if (err) throw err;
+        if (err) return res.send(null);
         userExist = data !== null;
     });
 }
@@ -412,16 +425,23 @@ function postDesiredGift(req, res) {
             title: body.title,
             desc: body.desc,
             desire_level: body.desire_level,
-            cost_level: body.cost_level
+            cost_level: body.cost_level,
+            isMarked: false
         };
-
-    Users.findOneAndUpdate({id: body.id}, {"$push": {"post": obj}}, (err, data) => {
-        if (err) throw err;
-        //TODO test the if data back
-        console.log(data);
-        res.json([{status: 'ok'}]);
+    if(userSession[body.id] === undefined) return res.send("please log in");
+    Users.findOneAndUpdate({_id: body.id}, {"$push": {"post": obj}}, (err, data) => {
+            if (err) return res.send(null);
+            //TODO test the if data back
+            console.log(data);
+            res.json([{status: 'ok'}]);
     });
+}
 
+function removeOneGift(req, res){
+
+}
+
+function removeManyGift(req, res){
 
 }
 
