@@ -50,12 +50,12 @@ app.get('/', function (req, res) {
 });
 
 app.get('/test', function (req, res) {
-    console.log("request"  + req.query.id + ", " + req.query.name);
+    console.log("request" + req.query.id + ", " + req.query.name);
     res.json({res: {a: 1, b: "dan"}});
 });
 
 app.post('/post', function (req, res) {
-    console.log("request: "  + req.body.id + " , " + req.body.name);
+    console.log("request: " + req.body.id + " , " + req.body.name);
     res.json({res: {a: 1, b: "dan"}});
 });
 /*debug page wasted*/
@@ -288,6 +288,7 @@ app.post('/searchUser', (req, res) => {
 
 app.get('/bestGiftSet', mostDesireGiftList);
 app.post('/newDesireGift', postDesiredGift);
+app.post('/removeOneGift', removeOneGift);
 
 /*check username and password by using token*/
 function authUser(obj, pass, res) {
@@ -421,27 +422,40 @@ function analysisData(req, res) {
 function postDesiredGift(req, res) {
     var body = req.body;
     var obj = {
-            image: body.image,
-            title: body.title,
-            desc: body.desc,
-            desire_level: body.desire_level,
-            cost_level: body.cost_level,
-            isMarked: false
-        };
-    if(userSession[body.id] === undefined) return res.send("please log in");
-    Users.findOneAndUpdate({_id: body.id}, {"$push": {"post": obj}}, (err, data) => {
+        image: body.image,
+        title: body.title,
+        desc: body.desc,
+        desire_level: body.desire_level,
+        cost_level: body.cost_level,
+        isMarked: false
+    };
+    if (auth(body.id)) {
+        Users.findOneAndUpdate({_id: body.id}, {"$push": {"post": obj}}, (err, data) => {
             if (err) return res.send(null);
             //TODO test the if data back
             console.log(data);
             res.json([{status: 'ok'}]);
-    });
+        });
+    }
+    else return res.send("please log in");
+
 }
 
-function removeOneGift(req, res){
-
+function removeOneGift(req, res) {
+    var body = req.body;
+    console.log(req.body);
+    if (auth(body.id)) {
+        Users.findOneAndUpdate({_id: body.id}, {"$pull": {"post" : { _id : body.gift_id }}}, (err, data) => {
+            if (err) return res.send(null);
+            console.log(data.post);
+            res.json([{status: 'ok'}]);
+        });
+    } else return res.send("please log in");
 }
 
-function removeManyGift(req, res){
+
+//TODO everyone below
+function removeManyGift(req, res) {
 
 }
 
@@ -456,3 +470,18 @@ function leftCommentOnPost(req, res) {
 
 }
 
+function markGift(req, res){
+    var body = req.body;
+    if (auth(body.id)) {
+        Users.findOneAndUpdate({_id: body.id}, {"$pull": {"post" : { _id : body.gift_id }}}, (err, data) => {
+            if (err) return res.send(null);
+            console.log(data.post);
+            res.json([{status: 'ok'}]);
+        });
+    } else return res.send("please log in");
+}
+
+
+function auth(id) {
+    return userSession[id] !== undefined;
+}
