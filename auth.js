@@ -218,7 +218,6 @@ app.post('/emailForPsw', (req, res) => {
 /*for reset or update password or username(account info)*/
 app.post('/serverUpdate', (req, res) => {
     if (req.body.type === 'resetPass') {
-        ``
         Users.findOne({
                 email: req.body.email || req.body.name, //different key all refer to email, this is one solution for bad structure 
             },
@@ -276,19 +275,24 @@ app.post('/searchUser', (req, res) => {
             break;
     }
 
-    if (!obj) return res.json({res: null});
-    Users.find(obj, 'nick_name, full_name, dob, avatar', (err, data) => {
-        if (err) return res.send(null);
-        if (data) {
-            return res.json({res: data});
-        }
-        return res.json({res: null});
-    });
+    if(auth(req.body.id)) {
+        if (!obj) return res.json({res: null});
+        Users.find(obj, '_id nick_name full_name dob avatar', (err, data) => {
+            if (err) return res.send(null);
+            if (data) {
+                return res.json({res: data});
+            }
+            return res.json({res: null});
+        });
+    }else return res.send('need log in');
 });
 
 app.get('/bestGiftSet', mostDesireGiftList);
 app.post('/newDesireGift', postDesiredGift);
 app.post('/removeOneGift', removeOneGift);
+app.post('/markGift', markGift);
+app.post('/updateGift', updateGift);
+app.get('/showUserGift', showUserGift);
 
 /*check username and password by using token*/
 function authUser(obj, pass, res) {
@@ -445,11 +449,35 @@ function removeOneGift(req, res) {
     var body = req.body;
     console.log(req.body);
     if (auth(body.id)) {
-        Users.findOneAndUpdate({_id: body.id}, {"$pull": {"post" : { _id : body.gift_id }}}, (err, data) => {
+        Users.findOneAndUpdate({_id: body.id}, {"$pull": {"post": {_id: body.gift_id}}}, (err, data) => {
             if (err) return res.send(null);
             console.log(data.post);
             res.json([{status: 'ok'}]);
         });
+    } else return res.send("please log in");
+}
+
+function updateGift(req, res) {
+    var body = req.body;
+    var updateData = generateUpdateData(req.body, "post");
+    if (auth(body.id)) {
+        Users.findOneAndUpdate({_id: body.id, "post._id": body.gift_id}, updateData, (err, data) => {
+            if (err) return res.send(null);
+            console.log(data.post);
+            res.json([{status: 'ok'}]);
+        });
+    } else return res.send("please log in");
+}
+
+function showUserGift(req, res) {
+    var body = req.query;
+    if (true||auth(body.id)) {
+        Users.findOne({_id: body.view_id}, '-_id post nick_name full_name avatar dob', (err, data) => {
+            if (err) return res.send(null);
+            console.log(data);
+            res.json([{status: 'ok', data: data}]);
+        });
+
     } else return res.send("please log in");
 }
 
@@ -470,10 +498,13 @@ function leftCommentOnPost(req, res) {
 
 }
 
-function markGift(req, res){
+function markGift(req, res) {
     var body = req.body;
-    if (auth(body.id)) {
-        Users.findOneAndUpdate({_id: body.id}, {"$pull": {"post" : { _id : body.gift_id }}}, (err, data) => {
+    if (true || auth(body.id)) {
+        Users.findOneAndUpdate({
+            _id: body.id,
+            "post._id": body.gift_id
+        }, {"$set": {"post.$.isMarked": true}}, (err, data) => {
             if (err) return res.send(null);
             console.log(data.post);
             res.json([{status: 'ok'}]);
@@ -485,3 +516,13 @@ function markGift(req, res){
 function auth(id) {
     return userSession[id] !== undefined;
 }
+
+function generateUpdateData(body, column) {
+    let stmt = {$set: {}};
+    for (let item in body) {
+        stmt.$set[column + ".$." + item] = body[item + ""];
+    }
+
+    return stmt;
+}
+
