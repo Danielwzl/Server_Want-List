@@ -90,6 +90,7 @@ app.post('/newUser', (req, res) => {
 //            country: req.body.country,
 //            pcode: req.body.pcode
 //        },
+        gender: req.body.gender,
         phone: req.body.phone,
         dob: req.body.dob,
         token: generateToken(req.body.nick_name, req.body.password)

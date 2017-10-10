@@ -8,6 +8,7 @@ var Authentications = new mongoose.Schema({
     nick_name: String,
     avatar: String,
     email: String,
+    gender: String,
     full_name: {
         lName: String,
         fName: String
