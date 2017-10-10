@@ -31,8 +31,23 @@ var Authentications = new mongoose.Schema({
         desire_level: Number,
         cost_level: Number,
         isMarked: Boolean,
-        createdAt: Date
-    }]
+        createdAt: Date,
+        updatedAt: Date
+    }],
+    share:[
+        {
+            image: String,
+            content: String,
+            comments: [
+                {
+                    post_user_id: String,
+                    comment: String,
+                    createdAt: Date
+                }
+            ],
+            like: Number
+        }
+    ]
 });
 
 Authentications.plugin(timestamps);

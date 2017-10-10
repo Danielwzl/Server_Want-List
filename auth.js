@@ -276,7 +276,7 @@ app.post('/searchUser', (req, res) => {
             break;
     }
 
-    if(auth(req.body.id)) {
+    if (auth(req.body.id)) {
         if (!obj) return res.json({res: null});
         Users.find(obj, '_id nick_name full_name dob avatar', (err, data) => {
             if (err) return res.send(null);
@@ -285,7 +285,7 @@ app.post('/searchUser', (req, res) => {
             }
             return res.json({res: null});
         });
-    }else return res.send('need log in');
+    } else return res.send('need log in');
 });
 
 app.get('/bestGiftSet', mostDesireGiftList);
@@ -426,20 +426,24 @@ function analysisData(req, res) {
 
 function postDesiredGift(req, res) {
     var body = req.body;
+    var now = new Date();
     var obj = {
         image: body.image,
         title: body.title,
         desc: body.desc,
         desire_level: body.desire_level,
         cost_level: body.cost_level,
-        isMarked: false
+        isMarked: false,
+        createdAt: now,
+        updatedAt: now,
     };
     if (auth(body.id)) {
         Users.findOneAndUpdate({_id: body.id}, {"$push": {"post": obj}}, (err, data) => {
             if (err) return res.send(null);
-            //TODO test the if data back
-            console.log(data);
-            res.json([{status: 'ok'}]);
+            if (data) {
+                res.json([{status: 'ok'}]);
+            }
+            else res.send(null);
         });
     }
     else return res.send("please log in");
@@ -452,8 +456,11 @@ function removeOneGift(req, res) {
     if (auth(body.id)) {
         Users.findOneAndUpdate({_id: body.id}, {"$pull": {"post": {_id: body.gift_id}}}, (err, data) => {
             if (err) return res.send(null);
-            console.log(data.post);
-            res.json([{status: 'ok'}]);
+            if (data) {
+                console.log(data.post);
+                res.json([{status: 'ok'}]);
+            }
+            else res.send(null);
         });
     } else return res.send("please log in");
 }
@@ -464,19 +471,27 @@ function updateGift(req, res) {
     if (auth(body.id)) {
         Users.findOneAndUpdate({_id: body.id, "post._id": body.gift_id}, updateData, (err, data) => {
             if (err) return res.send(null);
-            console.log(data.post);
-            res.json([{status: 'ok'}]);
+            if (data) {
+                console.log(data.post);
+                res.json([{status: 'ok'}]);
+            }
+            else res.send(null);
         });
     } else return res.send("please log in");
 }
 
 function showUserGift(req, res) {
     var body = req.query;
-    if (true||auth(body.id)) {
+    if (true || auth(body.id)) {
         Users.findOne({_id: body.view_id}, '-_id post nick_name full_name avatar dob', (err, data) => {
             if (err) return res.send(null);
-            console.log(data);
-            res.json([{status: 'ok', data: data}]);
+
+            if (data) {
+                console.log(data);
+                res.json([{status: 'ok', data: data}]);
+            }
+            else res.send(null);
+
         });
 
     } else return res.send("please log in");
@@ -507,8 +522,10 @@ function markGift(req, res) {
             "post._id": body.gift_id
         }, {"$set": {"post.$.isMarked": true}}, (err, data) => {
             if (err) return res.send(null);
-            console.log(data.post);
-            res.json([{status: 'ok'}]);
+            if (data) {
+                console.log(data.post);
+                res.json([{status: 'ok'}]);
+            } else res.send(null);
         });
     } else return res.send("please log in");
 }
@@ -523,7 +540,7 @@ function generateUpdateData(body, column) {
     for (let item in body) {
         stmt.$set[column + ".$." + item] = body[item + ""];
     }
-
+    stmt.$set[column + ".$." + "updatedAt"] = new Date();
     return stmt;
 }
 
