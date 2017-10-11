@@ -21,7 +21,7 @@ var Authentications = new mongoose.Schema({
         country: String,
         pcode: String
     },
-    dob: Date,
+    dob: String,
     phone: String,
     token: String,
     post: [{

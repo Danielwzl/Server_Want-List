@@ -75,6 +75,7 @@ app.post('/serverLogin', (req, res) => {
 
 /*sign up for new user*/
 app.post('/newUser', (req, res) => {
+    userExist = null;
     var usr = new Users({
         nick_name: req.body.nick_name,
         email: req.body.email,
@@ -96,8 +97,7 @@ app.post('/newUser', (req, res) => {
         token: generateToken(req.body.nick_name, req.body.password)
     });
 
-    var exist = userExists(req.body.phone);
-
+    var exist = userExists(req.body.phone, req.body.email);
     exist.then(function () {
         if (!userExist) {
             usr.save((err, data) => {
@@ -111,6 +111,7 @@ app.post('/newUser', (req, res) => {
                 });
             });
         }
+        else res.json({exist : userExist});
     });
 });
 
@@ -347,10 +348,17 @@ function formatTimeAndDate(time) {
     }
 }
 
-function userExists(phone) {
-    return Users.findOne({phone: phone}, '_id', (err, data) => {
+function userExists(phone, email) {
+       return Users.findOne({phone: phone}, '_id', (err, data) => {
         if (err) return res.send(null);
-        userExist = data !== null;
+        if(data) userExist = "phone";
+                if(!userExist){
+
+                    Users.findOne({email: email}, '_id', (err, data) => {
+                                  if (err) return res.send(null);
+                                  if(data) userExist = "email";
+                              });
+                }
     });
 }
 
