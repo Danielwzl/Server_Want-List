@@ -5,6 +5,7 @@ var exp = require('express'),
     jwt = require('jsonwebtoken'),
     config = require('./config.js'),
     nodemailer = require('nodemailer'),
+    fs = require('fs'),
     Users = require('./models/authentication.js');
 
 app.use(exp.static('public'));
@@ -105,13 +106,14 @@ app.post('/newUser', (req, res) => {
                 userSession[data._id] = {
                     name: data.nick_name
                 };
+                if (data._id) generateUserDir(data._id);
                 res.json({
                     name: data.nick_name,
                     token: data._id //as their new sid
                 });
             });
         }
-        else res.json({exist : userExist});
+        else res.json({exist: userExist});
     });
 });
 
@@ -349,16 +351,22 @@ function formatTimeAndDate(time) {
 }
 
 function userExists(phone, email) {
-       return Users.findOne({phone: phone}, '_id', (err, data) => {
-        if (err) return res.send(null);
-        if(data) userExist = "phone";
-                if(!userExist){
+    return new Promise((resolve, reject) => {
+        Users.findOne({phone: phone}, '_id', (err, data) => {
+            if (err) return res.send(null);
+            if (data) userExist = "phone";
+            console.log(1);
+            if (!userExist) {
+                Users.findOne({email: email}, '_id', (err, data) => {
+                    if (err) return res.send(null);
+                    if (data) userExist = "email";
+                });
+            }
+        });
 
-                    Users.findOne({email: email}, '_id', (err, data) => {
-                                  if (err) return res.send(null);
-                                  if(data) userExist = "email";
-                              });
-                }
+        setTimeout(function(){
+            resolve("Success!");
+        }, 250);
     });
 }
 
@@ -552,3 +560,29 @@ function generateUpdateData(body, column) {
     return stmt;
 }
 
+function generateUserDir(id) {
+    var dir = './uploads/user_files/';
+    if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir);
+    }
+    var userDir = dir + id + '/';
+    if (!fs.existsSync(userDir)) {
+        fs.mkdirSync(userDir);
+    }
+    var picDir = userDir + 'pics/';
+    if (!fs.existsSync(picDir)) {
+        fs.mkdirSync(picDir);
+    }
+    var avatarDir = picDir + 'avatar/';
+    var postDir = picDir + 'post/';
+    var shareDir = picDir + 'shareDir/';
+    if (!fs.existsSync(avatarDir)) {
+        fs.mkdirSync(avatarDir);
+    }
+    if (!fs.existsSync(postDir)) {
+        fs.mkdirSync(postDir);
+    }
+    if (!fs.existsSync(shareDir)) {
+        fs.mkdirSync(shareDir);
+    }
+}
