@@ -6,6 +6,7 @@ var exp = require('express'),
     config = require('./config.js'),
     nodemailer = require('nodemailer'),
     fs = require('fs'),
+    multer = require('multer'),
     Users = require('./models/authentication.js');
 
 app.use(exp.static('public'));
@@ -13,10 +14,24 @@ app.use(exp.static('public'));
 app.use(bp.urlencoded({
     extended: false
 }));
-
+app.use(bp.json());
 
 var userExist,
-    userSession = {};
+    userSession = {},
+    dir = './uploads/user_files/',
+    tempDir = dir + "tmp/",
+    tempFile = '',
+    storage = multer.diskStorage({
+        destination: function (req, file, cb) {
+            cb(null, tempDir);
+        },
+        filename: function (req, file, cb) {
+            if (file.fieldname === 'image')
+                cb(null, (tempFile = file.originalname + '-' + Date.now() + "." + file.mimetype.split('/')[1]));
+        }
+    }),
+    upload = multer({storage: storage});
+
 
 //sign up
 //login
@@ -44,6 +59,15 @@ let transporter = nodemailer.createTransport({
     }
 });
 
+app.get('/bestGiftSet', mostDesireGiftList);
+app.post('/newDesireGift', upload.single('image'), postDesiredGift);
+app.post('/updateAvatar', upload.single('image'), updateAvatar);
+app.post('/removeOneGift', removeOneGift);
+app.post('/markGift', markGift);
+app.post('/updateGift', updateGift);
+app.get('/showUserGift', showUserGift);
+
+
 /*debug page wasted*/
 app.get('/', function (req, res) {
     console.log("requested");
@@ -65,13 +89,18 @@ app.post('/post', function (req, res) {
 app.post('/serverLogin', (req, res) => {
     var nick_name = req.body.nick_name,
         pass = req.body.password;
-    if (nick_name.match(/\w+\@\w+(\.\w+)+/)) obj = {
-        email: nick_name //it will check user use either email or username
-    };
-    else obj = {
-        nick_name: nick_name
-    };
-    authUser(obj, pass, res); //auth user
+    if (nick_name.match(/\w+\@\w+(\.\w+)+/))
+    {
+        obj = {
+            email: nick_name //it will check user use either email or username
+        };
+        authUser(obj, pass, res); //auth user
+    }
+    else res.json({status: "please use email.."});
+    // else obj = {
+    //     nick_name: nick_name
+    // };
+
 });
 
 /*sign up for new user*/
@@ -92,6 +121,7 @@ app.post('/newUser', (req, res) => {
 //            country: req.body.country,
 //            pcode: req.body.pcode
 //        },
+        avatar: "",
         gender: req.body.gender,
         phone: req.body.phone,
         dob: req.body.dob,
@@ -142,7 +172,7 @@ app.post('/serverCheck', (req, res) => {
     });
 });
 
-/*update user persional infomation*/
+/*update user personal information TODO test*/
 app.post('/updatePersonalInfo', (req, res) => {
     var obj = {
         rName: {
@@ -177,7 +207,7 @@ app.post('/updatePersonalInfo', (req, res) => {
 /*get user profile- updated*/
 app.post('/getUserProfile', (req, res) => {
     if (!req.body._id) return;
-    Users.findOne(req.body, '-_id -__v', (err, data) => {
+    Users.findOne(req.body, '-__v', (err, data) => {
         if (err) return res.send(null);
         res.send(data);
     });
@@ -291,12 +321,6 @@ app.post('/searchUser', (req, res) => {
     } else return res.send('need log in');
 });
 
-app.get('/bestGiftSet', mostDesireGiftList);
-app.post('/newDesireGift', postDesiredGift);
-app.post('/removeOneGift', removeOneGift);
-app.post('/markGift', markGift);
-app.post('/updateGift', updateGift);
-app.get('/showUserGift', showUserGift);
 
 /*check username and password by using token*/
 function authUser(obj, pass, res) {
@@ -350,12 +374,31 @@ function formatTimeAndDate(time) {
     }
 }
 
+
+function updateAvatar(req, res) {
+    var body = req.body;
+    if (auth(body.id)) {
+        var file = req.file;
+        var picDir = dir + body.id + "/pics/avatar/";
+        if (fs.existsSync(picDir) && fs.existsSync(tempDir + tempFile))
+            moveFile(tempDir + tempFile, picDir + tempFile);
+        Users.findOneAndUpdate({_id: req.body.id}, {avatar: picDir + tempFile}, (err, data) => {
+            if (err)  res.send(null);
+            if (data) res.json([{status: "ok"}]);
+            else res.send(null);
+        });
+    } else {
+        fs.unlinkSync(tempDir + tempFile);
+        res.send("please log in");
+    }
+}
+
+
 function userExists(phone, email) {
     return new Promise((resolve, reject) => {
         Users.findOne({phone: phone}, '_id', (err, data) => {
             if (err) return res.send(null);
             if (data) userExist = "phone";
-            console.log(1);
             if (!userExist) {
                 Users.findOne({email: email}, '_id', (err, data) => {
                     if (err) return res.send(null);
@@ -363,8 +406,7 @@ function userExists(phone, email) {
                 });
             }
         });
-
-        setTimeout(function(){
+        setTimeout(function () {
             resolve("Success!");
         }, 250);
     });
@@ -442,18 +484,23 @@ function analysisData(req, res) {
 
 function postDesiredGift(req, res) {
     var body = req.body;
-    var now = new Date();
-    var obj = {
-        image: body.image,
-        title: body.title,
-        desc: body.desc,
-        desire_level: body.desire_level,
-        cost_level: body.cost_level,
-        isMarked: false,
-        createdAt: now,
-        updatedAt: now,
-    };
     if (auth(body.id)) {
+        var file = req.file;
+        var picDir = dir + body.id + "/pics/post/";
+        if (fs.existsSync(picDir) && fs.existsSync(tempDir + tempFile))
+            moveFile(tempDir + tempFile, picDir + tempFile);
+        var now = new Date();
+        var obj = {
+            image: picDir + tempFile,
+            imageName: file.originalname,
+            title: body.title,
+            desc: body.desc,
+            desire_level: body.desire_level,
+            cost_level: body.cost_level,
+            isMarked: false,
+            createdAt: now,
+            updatedAt: now,
+        };
         Users.findOneAndUpdate({_id: body.id}, {"$push": {"post": obj}}, (err, data) => {
             if (err) return res.send(null);
             if (data) {
@@ -462,8 +509,16 @@ function postDesiredGift(req, res) {
             else res.send(null);
         });
     }
-    else return res.send("please log in");
+    else {
+        fs.unlinkSync(tempDir + tempFile);
+        return res.send("please log in");
+    }
 
+}
+
+function moveFile(src, des) {
+    fs.createReadStream(src).pipe(fs.createWriteStream(des));
+    fs.unlinkSync(src);
 }
 
 function removeOneGift(req, res) {
@@ -561,7 +616,6 @@ function generateUpdateData(body, column) {
 }
 
 function generateUserDir(id) {
-    var dir = './uploads/user_files/';
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir);
     }

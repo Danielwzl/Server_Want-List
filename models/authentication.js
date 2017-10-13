@@ -26,6 +26,7 @@ var Authentications = new mongoose.Schema({
     token: String,
     post: [{
         image: String,
+        imageName: String,
         title: String,
         desc: String,
         desire_level: Number,
