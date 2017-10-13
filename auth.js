@@ -619,6 +619,10 @@ function generateUserDir(id) {
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir);
     }
+    var tmpDir = dir + 'tmp/';
+    if (!fs.existsSync(dir + 'tmp/')) {
+        fs.mkdirSync(tmpDir);
+    }
     var userDir = dir + id + '/';
     if (!fs.existsSync(userDir)) {
         fs.mkdirSync(userDir);
