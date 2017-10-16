@@ -69,6 +69,26 @@ app.get('/showUserGift', showUserGift);
 
 
 /*debug page wasted*/
+
+app.post('/getImage', (req,res) =>{
+    Users.findOne({_id: "59dff41cf332490ac0226460"}, "post", (err, data)=>{
+        if(err) res.send(null);
+        if(data) {
+            if(fs.existsSync(data.post[0].image)){
+                   fs.readFile(data.post[0].image, function (err, file) {
+                        if (err)
+                            res.send(null);
+                         else {
+                            res.send({status: "ok", data : data, image: file});
+                        }
+                    });
+            }
+
+        }
+
+    });
+});
+
 app.get('/', function (req, res) {
     console.log("requested");
     res.json({res: 'hello'});
@@ -82,6 +102,12 @@ app.get('/test', function (req, res) {
 app.post('/post', function (req, res) {
     console.log("request: " + req.body.id + " , " + req.body.name);
     res.json({res: {a: 1, b: "dan"}});
+});
+
+app.post('/file', upload.single('image'), (req,res)=>{
+   console.log(req.body);
+   console.log(req.file);
+   res.json({status: "ok"});
 });
 /*debug page wasted*/
 
@@ -384,7 +410,7 @@ function updateAvatar(req, res) {
             moveFile(tempDir + tempFile, picDir + tempFile);
         Users.findOneAndUpdate({_id: req.body.id}, {avatar: picDir + tempFile}, (err, data) => {
             if (err)  res.send(null);
-            if (data) res.json([{status: "ok"}]);
+            if (data) res.json({status: "ok"});
             else res.send(null);
         });
     } else {
@@ -504,7 +530,7 @@ function postDesiredGift(req, res) {
         Users.findOneAndUpdate({_id: body.id}, {"$push": {"post": obj}}, (err, data) => {
             if (err) return res.send(null);
             if (data) {
-                res.json([{status: 'ok'}]);
+                res.json({status: 'ok'});
             }
             else res.send(null);
         });
@@ -529,7 +555,7 @@ function removeOneGift(req, res) {
             if (err) return res.send(null);
             if (data) {
                 console.log(data.post);
-                res.json([{status: 'ok'}]);
+                res.json({status: 'ok'});
             }
             else res.send(null);
         });
@@ -544,7 +570,7 @@ function updateGift(req, res) {
             if (err) return res.send(null);
             if (data) {
                 console.log(data.post);
-                res.json([{status: 'ok'}]);
+                res.json({status: 'ok'});
             }
             else res.send(null);
         });
@@ -559,7 +585,7 @@ function showUserGift(req, res) {
 
             if (data) {
                 console.log(data);
-                res.json([{status: 'ok', data: data}]);
+                res.json({status: 'ok', data: data});
             }
             else res.send(null);
 
@@ -595,7 +621,7 @@ function markGift(req, res) {
             if (err) return res.send(null);
             if (data) {
                 console.log(data.post);
-                res.json([{status: 'ok'}]);
+                res.json({status: 'ok'});
             } else res.send(null);
         });
     } else return res.send("please log in");
