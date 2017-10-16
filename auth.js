@@ -70,11 +70,24 @@ app.get('/showUserGift', showUserGift);
 
 /*debug page wasted*/
 
-app.post('/getImage', (req,res) =>{
-    Users.findOne({_id: "59dff41cf332490ac0226460"}, "post", (err, data)=>{
+/*
+this is the way how to do the sort depending on the subdocuments in mongoose
+*/
+app.post('/getImage', (req,res) =>{ 
+    Users.aggregate([
+    {$match: {_id: mongoose.Types.ObjectId("59dff41cf332490ac0226460")}},
+    { $unwind: "$post" },
+    { $project: {
+        updatedAt: '$post.updatedAt',
+        "post" : 1,
+        "document": "$$ROOT"
+
+    }},
+    { $sort: {updatedAt: 1}}
+    ], function (err, data) { 
         if(err) res.send(null);
         if(data) {
-            if(fs.existsSync(data.post[0].image)){
+            if(fs.existsSync(data[0].image)){
                    fs.readFile(data.post[0].image, function (err, file) {
                         if (err)
                             res.send(null);
@@ -83,10 +96,10 @@ app.post('/getImage', (req,res) =>{
                         }
                     });
             }
-
+            else res.send(data);
         }
-
     });
+
 });
 
 app.get('/', function (req, res) {
@@ -580,7 +593,7 @@ function updateGift(req, res) {
 function showUserGift(req, res) {
     var body = req.query;
     if (true || auth(body.id)) {
-        Users.findOne({_id: body.view_id}, '-_id post nick_name full_name avatar dob', (err, data) => {
+        Users.findOne({_id: body.view_id}, '-_id -post.image nick_name full_name avatar dob', (err, data) => {
             if (err) return res.send(null);
 
             if (data) {
