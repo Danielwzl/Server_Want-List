@@ -291,22 +291,22 @@ app.post('/emailForPsw', (req, res) => {
 /*for reset or update password or username(account info)*/
 app.post('/serverUpdate', (req, res) => {
     if (req.body.type === 'resetPass') {
+        if(!authUser(req.body.id)) return res.send("please log in")
         Users.findOne({
-                email: req.body.email || req.body.name, //different key all refer to email, this is one solution for bad structure 
+                _id: req.body.id 
             },
-            'name token pass', (err, data) => {
+            'nick_name token', (err, data) => {
                 if (err) {
                     return res.send(null);
                 } else {
-                    if (!data) return;
-                    var name = req.body.newName || data.name, //get name for making token
+                    if (!data) return res.send(null);
+                    var name = req.body.newName || data.nick_name, //get name for making token
                         token = req.body.newPass ? generateToken(name, req.body.newPass) : data.token; //if there is new password, generate token otherwise user old password
                     if (name != null) {
                         Users.findOneAndUpdate({
-                            name: data.name
+                            _id: req.body.id
                         }, {
-                            name: name,
-                            pass: req.body.newPass || data.pass,
+//                            nick_name: name,
                             token: token
                         }, (err, data) => {
                             if (err) return res.send(null);
