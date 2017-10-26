@@ -364,8 +364,8 @@ app.post('/searchUser', (req, res) => {
 /*check username and password by using token*/
 function authUser(obj, pass, res) {
     var status = 'fail',
-        token, name;
-    Users.findOne(obj, (err, data) => {
+        token, data;
+    Users.findOne(obj, "-post -avatar -__v -share", (err, data) => {
         if (err) return res.send(null);
         if (!data) {
             console.log('user not exists');
@@ -374,10 +374,16 @@ function authUser(obj, pass, res) {
             if (pass === token.pass) {
                 status = 'ok';
                 token = data._id;
-                name = data.name;
+                userData = {
+                    nick_name: data.nick_name,
+                    email:data.email,
+                    gender: data.gender,
+                    full_name: data.full_name,
+                    dob: data.dob,
+                    phone: data.phone
+                };
             } else token = null;
         }
-
         if (!res) return;
         if (token) {
             userSession[data._id] = { //use token as sessionID
@@ -387,7 +393,7 @@ function authUser(obj, pass, res) {
             console.log('logged in');
         }
         res.json({
-            name: name,
+            user: userData,
             status: status,
             token: token
         });
@@ -530,7 +536,7 @@ function postDesiredGift(req, res) {
             moveFile(tempDir + tempFile, picDir + tempFile);
         var now = new Date();
         var obj = {
-            image: picDir + tempFile,
+            image: file.size == 0 ? "default" : picDir + tempFile,
             imageName: file.originalname,
             title: body.title,
             desc: body.desc,
@@ -540,6 +546,7 @@ function postDesiredGift(req, res) {
             createdAt: now,
             updatedAt: now,
         };
+        console.log(obj);
         Users.findOneAndUpdate({_id: body.id}, {"$push": {"post": obj}}, (err, data) => {
             if (err) return res.send(null);
             if (data) {
