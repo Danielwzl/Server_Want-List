@@ -66,6 +66,7 @@ app.post('/removeOneGift', removeOneGift);
 app.post('/markGift', markGift);
 app.post('/updateGift', updateGift);
 app.get('/showUserGift', showUserGift);
+app.post('/getAvatar', getAvatar);
 
 
 /*debug page wasted*/
@@ -160,7 +161,7 @@ app.post('/newUser', (req, res) => {
 //            country: req.body.country,
 //            pcode: req.body.pcode
 //        },
-        avatar: "",
+        avatar: "default",
         gender: req.body.gender,
         phone: req.body.phone,
         dob: req.body.dob,
@@ -213,34 +214,40 @@ app.post('/serverCheck', (req, res) => {
 
 /*update user personal information TODO test*/
 app.post('/updatePersonalInfo', (req, res) => {
-    var obj = {
-        rName: {
-            lName: req.body.lName,
-            fName: req.body.fName
-        },
-        address: {
-            unit: req.body.unit,
-            street: req.body.street,
-            city: req.body.city,
-            province: req.body.province,
-            country: req.body.country,
-            pcode: req.body.pcode
-        },
-        phone: req.body.phone
-    };
+if(auth(req.body.id)){
+        var obj = {
+            rName: {
+                lName: req.body.lName,
+                fName: req.body.fName
+            },
+            gender: req.body.gender,
+            dob: req.body.dob,
+            nick_name: req.body.nick_name
+    //        address: {
+    //            unit: req.body.unit,
+    //            street: req.body.street,
+    //            city: req.body.city,
+    //            province: req.body.province,
+    //            country: req.body.country,
+    //            pcode: req.body.pcode
+    //        },
+    //        phone: req.body.phone
+        };
+        console.log(obj);
+        Users.findOneAndUpdate({
+            _id: req.body.id
+        }, obj, (err, data) => {
+            if (err) return res.send(null);
 
-    Users.findOneAndUpdate({
-        name: req.body.name
-    }, obj, (err, data) => {
-        if (err) return res.send(null);
-
-        if (data) res.json({
-            done: true
+            if (data) res.json({
+                status: "ok"
+            });
+            else res.json({
+                status: "fail"
+            });
         });
-        else res.json({
-            done: false
-        });
-    });
+    }
+    else res.send(null);
 });
 
 /*get user profile- updated*/
@@ -291,7 +298,7 @@ app.post('/emailForPsw', (req, res) => {
 /*for reset or update password or username(account info)*/
 app.post('/serverUpdate', (req, res) => {
     if (req.body.type === 'resetPass') {
-        if(!authUser(req.body.id)) return res.send("please log in")
+        if(!auth(req.body.id)) return res.send("please log in")
         Users.findOne({
                 _id: req.body.id 
             },
@@ -302,6 +309,7 @@ app.post('/serverUpdate', (req, res) => {
                     if (!data) return res.send(null);
                     var name = req.body.newName || data.nick_name, //get name for making token
                         token = req.body.newPass ? generateToken(name, req.body.newPass) : data.token; //if there is new password, generate token otherwise user old password
+                    console.log(token + ", " + data.token);
                     if (name != null) {
                         Users.findOneAndUpdate({
                             _id: req.body.id
@@ -364,7 +372,8 @@ app.post('/searchUser', (req, res) => {
 /*check username and password by using token*/
 function authUser(obj, pass, res) {
     var status = 'fail',
-        token, data;
+        token, data, userData;
+
     Users.findOne(obj, "-post -avatar -__v -share", (err, data) => {
         if (err) return res.send(null);
         if (!data) {
@@ -382,9 +391,9 @@ function authUser(obj, pass, res) {
                     dob: data.dob,
                     phone: data.phone
                 };
+
             } else token = null;
         }
-        if (!res) return;
         if (token) {
             userSession[data._id] = { //use token as sessionID
                 name: data.nick_name
@@ -392,6 +401,7 @@ function authUser(obj, pass, res) {
             console.log(userSession);
             console.log('logged in');
         }
+
         res.json({
             user: userData,
             status: status,
@@ -599,10 +609,11 @@ function updateGift(req, res) {
 
 function showUserGift(req, res) {
     var body = req.query;
-    if (true || auth(body.id)) {
-        Users.findOne({_id: body.view_id}, '-_id -post.image nick_name full_name avatar dob', (err, data) => {
-            if (err) return res.send(null);
 
+    if (auth(body.id)) {
+        Users.findOne({_id: body.view_id}, '-_id -post.image -token -phone -email -share', (err, data) => {
+            if (err) return res.send(null);
+        console.log(11111);
             if (data) {
                 console.log(data);
                 res.json({status: 'ok', data: data});
@@ -688,5 +699,26 @@ function generateUserDir(id) {
     }
     if (!fs.existsSync(shareDir)) {
         fs.mkdirSync(shareDir);
+    }
+}
+
+function getAvatar(req, res){
+    var id = req.body.id;
+    if(true || auth(id)){
+          Users.findOne({_id: id}, "-_id avatar", function (err, data) {
+                if(err) res.send(null);
+                if(data) {
+                    if(fs.existsSync(data.avatar)){
+                           fs.readFile(data.avatar, function (err, file) {
+                                if (err)
+                                    res.send(null);
+                                 else {
+                                    res.send({status: "ok", image: file});
+                                }
+                            });
+                    }
+                    else res.send(data[0]);
+                }
+            });
     }
 }
