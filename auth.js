@@ -343,7 +343,10 @@ app.post('/searchUser', (req, res) => {
             obj = {nick_name: value};
             break;
         case 'name':
-            obj = {name: value};
+            if(value){
+                var names = value.split(" ");
+                obj = {"full_name.fName": names[0], "full_name.lName": names[1]};
+            }
             break;
         case 'phone':
             obj = {phone: value};
@@ -356,9 +359,10 @@ app.post('/searchUser', (req, res) => {
             break;
     }
 
+
     if (auth(req.body.id)) {
         if (!obj) return res.json({res: null});
-        Users.find(obj, '_id nick_name full_name dob avatar', (err, data) => {
+        Users.find(obj, '_id full_name dob avatar gender', (err, data) => {
             if (err) return res.send(null);
             if (data) {
                 return res.json({res: data});
@@ -613,7 +617,6 @@ function showUserGift(req, res) {
     if (auth(body.id)) {
         Users.findOne({_id: body.view_id}, '-_id -post.image -token -phone -email -share', (err, data) => {
             if (err) return res.send(null);
-        console.log(11111);
             if (data) {
                 console.log(data);
                 res.json({status: 'ok', data: data});
@@ -644,11 +647,11 @@ function leftCommentOnPost(req, res) {
 
 function markGift(req, res) {
     var body = req.body;
-    if (true || auth(body.id)) {
+    if (auth(body.id)) {
         Users.findOneAndUpdate({
             _id: body.id,
-            "post._id": body.gift_id
-        }, {"$set": {"post.$.isMarked": true}}, (err, data) => {
+            "post._id": body.view_id
+        }, {"$set": {"post.$.isMarked": req.body.marked}}, (err, data) => {
             if (err) return res.send(null);
             if (data) {
                 console.log(data.post);
