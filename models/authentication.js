@@ -31,7 +31,7 @@ var Authentications = new mongoose.Schema({
         desc: String,
         desire_level: Number,
         cost_level: Number,
-        isMarked: Boolean,
+        isMarked: String,
         createdAt: Date,
         updatedAt: Date
     }],

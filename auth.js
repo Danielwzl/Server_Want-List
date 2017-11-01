@@ -556,7 +556,7 @@ function postDesiredGift(req, res) {
             desc: body.desc,
             desire_level: body.desire_level,
             cost_level: body.cost_level,
-            isMarked: false,
+            isMarked: "none",
             createdAt: now,
             updatedAt: now,
         };
@@ -583,17 +583,16 @@ function moveFile(src, des) {
 
 function removeOneGift(req, res) {
     var body = req.body;
-    console.log(req.body);
-    if (auth(body.id)) {
-        Users.findOneAndUpdate({_id: body.id}, {"$pull": {"post": {_id: body.gift_id}}}, (err, data) => {
+    if (auth(body.id) && body.owner_id == body.id) {
+        Users.findOneAndUpdate({_id: body.id}, {"$pull": {"post": {_id: body.post_id}}}, (err, data) => {
             if (err) return res.send(null);
             if (data) {
-                console.log(data.post);
+                console.log(data);
                 res.json({status: 'ok'});
             }
             else res.send(null);
         });
-    } else return res.send("please log in");
+    } else res.send(null);
 }
 
 function updateGift(req, res) {
@@ -647,18 +646,36 @@ function leftCommentOnPost(req, res) {
 
 function markGift(req, res) {
     var body = req.body;
-    if (auth(body.id)) {
-        Users.findOneAndUpdate({
-            _id: body.id,
-            "post._id": body.view_id
-        }, {"$set": {"post.$.isMarked": req.body.marked}}, (err, data) => {
+    var post_id = body.post_id,
+    view_id= body.view_id,
+    id= body.id;
+    if (view_id != id && auth(id)) {
+        Users.findOne({
+            _id: view_id,
+            "post._id": post_id
+        },  { 'post.$': 1 }, (err, data) => {
             if (err) return res.send(null);
             if (data) {
-                console.log(data.post);
-                res.json({status: 'ok'});
+
+               var mark = data.post[0].isMarked;
+                var notMarked = mark == "none";
+               if(notMarked || mark == id){
+               Users.update({
+                    _id: view_id,
+                     "post._id": post_id
+               }, {"$set": {"post.$.isMarked": notMarked ? body.id : "none"}}, (err, data)=>{
+                      if(err) res.send(null);
+
+                     if(data.n > 0){
+                         res.json({status: 'ok'});
+                    }
+                    else res.send(null);
+                });
+               }
+               else res.send(null);
             } else res.send(null);
         });
-    } else return res.send("please log in");
+    } else res.json({error: "login pls, or mark on own post"});
 }
 
 
