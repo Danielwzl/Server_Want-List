@@ -187,12 +187,12 @@ app.post('/newUser', (req, res) => {
     });
 });
 
-app.post('/logout/:id', function (req, res) {
+app.post('/logout', function (req, res) {
     var flag = false;
-    if (userSession[req.params.id]) { //if there is session and user hit logout button
-        delete userSession[req.params.id]; //delete from session array
+    if (userSession[req.body.id]) { //if there is session and user hit logout button
+        delete userSession[req.body.id]; //delete from session array
         console.log(userSession);
-        console.log(req.params.id + ": logout");
+        console.log(req.body.id + ": logout");
         flag = true;
     }
     res.json({
