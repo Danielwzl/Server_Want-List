@@ -386,8 +386,8 @@ app.post('/searchUser', (req, res) => {
 function authUser(obj, pass, res) {
     var status = 'fail',
         token, data, userData;
-
-    Users.findOne(obj, "-post -avatar -__v -share", (err, data) => {
+    var avatar;
+    Users.findOne(obj, "-post -__v -share", (err, data) => {
         if (err) return res.send(null);
         if (!data) {
             console.log('user not exists');
@@ -404,7 +404,9 @@ function authUser(obj, pass, res) {
                     dob: data.dob,
                     phone: data.phone
                 };
-
+                if(data.avatar != "default" && fs.existsSync(data.avatar)){
+                    avatar = fs.readFileSync(data.avatar)
+                }
             } else token = null;
         }
         if (token) {
@@ -418,7 +420,8 @@ function authUser(obj, pass, res) {
         res.json({
             user: userData,
             status: status,
-            token: token
+            token: token,
+            avatar: null
         });
     });
 }
