@@ -337,7 +337,8 @@ app.post('/serverUpdate', (req, res) => {
 app.post('/searchUser', (req, res) => {
     var type = req.body.type,
         value = req.body.value,
-        obj;
+        obj,
+        avatars = {};
     switch (type) {
         case 'nick_name' :
             obj = {nick_name: value};
@@ -360,12 +361,20 @@ app.post('/searchUser', (req, res) => {
     }
 
 
-    if (auth(req.body.id)) {
+    if (true || auth(req.body.id)) {
         if (!obj) return res.json({res: null});
         Users.find(obj, '_id full_name dob avatar gender', (err, data) => {
             if (err) return res.send(null);
             if (data) {
-                return res.json({res: data});
+                for(let i = 0, len = data.length; i < len; i++){
+                     if(fs.existsSync(data[i].avatar)){
+                            if(fs.existsSync(data[i].avatar)){
+                                avatars[data[i].id] = fs.readFileSync(data[i].avatar);
+                                data[i].avatar = "file";
+                        }
+                    }
+                }
+                return res.json({status: "ok", res: data, imageData: avatars});
             }
             return res.json({res: null});
         });
