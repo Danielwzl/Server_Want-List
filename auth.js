@@ -453,23 +453,39 @@ function updateAvatar(req, res) {
 }
 
 
+function readImage(data, path, i) {
+    return new Promise((resolve, reject) => {
+             if(fs.existsSync(path)){
+                 fs.readFile(path, function (err, file) {
+                     if(file) {
+                         data.post[i].image = 123;
+                         console.log(file);
+                     }
+                 });
+         }
+         setTimeout(function () {
+             resolve("Success!");
+         }, 250);
+     });
+ }
+
 function userExists(phone, email) {
     return new Promise((resolve, reject) => {
-        Users.findOne({phone: phone}, '_id', (err, data) => {
-            if (err) return res.send(null);
-            if (data) userExist = "phone";
-            if (!userExist) {
-                Users.findOne({email: email}, '_id', (err, data) => {
-                    if (err) return res.send(null);
-                    if (data) userExist = "email";
-                });
-            }
-        });
-        setTimeout(function () {
-            resolve("Success!");
-        }, 250);
-    });
-}
+         Users.findOne({phone: phone}, '_id', (err, data) => {
+             if (err) return res.send(null);
+             if (data) userExist = "phone";
+             if (!userExist) {
+                 Users.findOne({email: email}, '_id', (err, data) => {
+                     if (err) return res.send(null);
+                     if (data) userExist = "email";
+                 });
+             }
+         });
+         setTimeout(function () {
+             resolve("Success!");
+         }, 250);
+     });
+ }
 
 /**
  * if user select couples of item and wanna figure out what is the lowest price which can get
@@ -612,18 +628,28 @@ function updateGift(req, res) {
 
 function showUserGift(req, res) {
     var body = req.query;
-
+    var promises = [];
+    var temp = {};
     if (auth(body.id)) {
-        Users.findOne({_id: body.view_id}, '-_id -post.image -token -phone -email -share', (err, data) => {
+        Users.findOne({_id: body.view_id}, '-_id -token -phone -email -share', (err, data) => {
             if (err) return res.send(null);
             if (data) {
-                console.log(data);
-                res.json({status: 'ok', data: data});
+                if( data.post){
+                 var imageData = null;
+                        for(let i = 0, len = data.post.length; i < len; i++){
+                            if(fs.existsSync(data.post[i].image)){
+                                if(fs.existsSync(data.post[i].image)){
+                                    imageData = fs.readFileSync(data.post[i].image);
+                                    temp[data.post[i].id] = imageData;
+                                    data.post[i].image = "file";
+                            }
+                        }
+                    }
+                }
+                res.json({status: 'ok', data: data, imageData: temp});
             }
             else res.send(null);
-
         });
-
     } else return res.send("please log in");
 }
 
@@ -724,7 +750,7 @@ function generateUserDir(id) {
 
 function getAvatar(req, res){
     var id = req.body.id;
-    if(true || auth(id)){
+    if( auth(id)){
           Users.findOne({_id: id}, "-_id avatar", function (err, data) {
                 if(err) res.send(null);
                 if(data) {
