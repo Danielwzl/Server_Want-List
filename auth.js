@@ -67,6 +67,7 @@ app.post('/markGift', markGift);
 app.post('/updateGift', updateGift);
 app.get('/showUserGift', showUserGift);
 app.post('/getAvatar', getAvatar);
+app.get('/showAllMarked', showAllMarked);
 
 
 /*debug page wasted*/
@@ -779,4 +780,46 @@ function getAvatar(req, res){
                 }
             });
     }
+}
+
+function showAllMarked(req, res){
+    var id = req.query.id;
+    if(true || auth(id)){
+        Users.aggregate([
+            { $unwind: "$post" },
+             {$match: {"post.isMarked": id}},
+            { $project: {
+                updatedAt: '$post.updatedAt',
+                "post" : 1,
+                "document": "$$ROOT.full_name"
+            }},
+            { $sort: {updatedAt: -1}}
+            ], function (err, data) {
+                if(err) res.send(null);
+                if(data) {
+//                return res.send(data)
+                     var imageData = null;
+                     var temp = {};
+                        for(let i = 0, len = data.length; i < len; i++){
+                            if(fs.existsSync(data[i].post.image)){
+                                if(fs.existsSync(data[i].post.image)){
+                                    imageData = fs.readFileSync(data[i].post.image);
+                                    if(temp[data[i]._id] == undefined) temp[data[i]._id] = {}
+                                    temp[data[i]._id][data[i].post._id] = imageData;
+                                    data[i].post.image = "file";
+                            }
+                        }
+                          data[i].post.full_name = data[i].document.fName + ' ' + data[i].document.lName;
+                                                            data[i].post.user_id = data[i]._id;
+                                                            delete data[i]['document']
+                                                            delete data[i]['updatedAt']
+                                                            delete data[i].post['createdAt']
+                                                            delete data[i].post['imageName']
+                                                            delete data[i]['_id']
+                    }
+                   res.json({status: "ok", data: data, imageData: temp});
+                }
+            });
+    }
+    else res.send("please log in")
 }
