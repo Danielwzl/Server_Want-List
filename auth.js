@@ -40,7 +40,7 @@ var userExist,
 
 
 /*start sever in 3002*/
-var server = app.listen(3002, (err) => {
+var server = app.listen(process.env.PORT || 3002, (err) => {
     if (err) console.log('error');
     else {
         var port = server.address().port;

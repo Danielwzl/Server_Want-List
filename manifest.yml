@@ -1,0 +1,9 @@
+---
+applications:
+- name: auth0202
+  memory: 512M
+  command: node auth.js
+  buildpack: https://github.com/cloudfoundry/nodejs-buildpack
+  instances: 1
+  random-route: true
+
