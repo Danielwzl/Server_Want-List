@@ -422,7 +422,7 @@ function authUser(obj, pass, res) {
             user: userData,
             status: status,
             token: token,
-            avatar: null
+            avatar: avatar
         });
     });
 }
@@ -784,7 +784,7 @@ function getAvatar(req, res){
 
 function showAllMarked(req, res){
     var id = req.query.id;
-    if(true || auth(id)){
+    if(auth(id)){
         Users.aggregate([
             { $unwind: "$post" },
              {$match: {"post.isMarked": id}},
