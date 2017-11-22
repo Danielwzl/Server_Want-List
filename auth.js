@@ -347,7 +347,17 @@ app.post('/searchUser', (req, res) => {
         case 'name':
             if(value){
                 var names = value.split(" ");
-                obj = {"full_name.fName": names[0], "full_name.lName": names[1]};
+                obj = {
+                        $or :
+                                [
+                                     {"full_name.fName": {'$regex': '.*' + names[0]  + '.*'}},
+                                     {"full_name.lName": {'$regex': '.*' + names[0]  + '.*'}},
+                                     {"full_name.lName": {'$regex': '.*' + value + '.*'}},
+                                     {"full_name.fName": {'$regex': '.*' + value  + '.*'}},
+                                     {"full_name.lName": {'$regex': '.*' + names[1] + '.*'}},
+                                ]
+
+                      };
             }
             break;
         case 'phone':
