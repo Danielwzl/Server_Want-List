@@ -421,6 +421,7 @@ function authUser(obj, pass, res) {
             } else token = null;
         }
         if (token) {
+            generateUserDir(data._id);
             userSession[data._id] = { //use token as sessionID
                 name: data.nick_name
             };
