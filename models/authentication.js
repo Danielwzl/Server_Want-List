@@ -24,6 +24,10 @@ var Authentications = new mongoose.Schema({
     dob: String,
     phone: String,
     token: String,
+    friend: [{
+              userid: String,
+              isFriend: Boolean
+             }],
     post: [{
         image: String,
         imageName: String,

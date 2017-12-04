@@ -68,7 +68,12 @@ app.post('/updateGift', updateGift);
 app.get('/showUserGift', showUserGift);
 app.post('/getAvatar', getAvatar);
 app.get('/showAllMarked', showAllMarked);
-
+app.get('/getNewFriend', getNewFriend);
+app.get('/showFriend', showFriend);
+app.post('/addFriend', addFriend);
+app.post('/removeFriend', removeFriend);
+app.post('/confirmFriend', confirmFriend);
+app.post('/rejectFriend', rejectFriend);
 
 /*debug page wasted*/
 
@@ -77,7 +82,7 @@ this is the way how to do the sort depending on the subdocuments in mongoose
 */
 app.post('/getImage', (req,res) =>{ 
     Users.aggregate([
-    {$match: {_id: mongoose.Types.ObjectId("59dff41cf332490ac0226460")}},
+    {$match: {'_id': mongoose.Types.ObjectId("59dff41cf332490ac0226460")}},
     { $unwind: "$post" },
     { $project: {
         updatedAt: '$post.updatedAt',
@@ -370,11 +375,9 @@ app.post('/searchUser', (req, res) => {
             obj = {dob: value};
             break;
     }
-
-
     if (true || auth(req.body.id)) {
         if (!obj) return res.json({res: null});
-        Users.find(obj, '_id full_name dob avatar gender', (err, data) => {
+        Users.find(obj, '_id full_name dob avatar gender friend', (err, data) => {
             if (err) return res.send(null);
             if (data) {
                 for(let i = 0, len = data.length; i < len; i++){
@@ -384,6 +387,17 @@ app.post('/searchUser', (req, res) => {
                                 data[i].avatar = "file";
                         }
                     }
+                      if(data[i]['_id'] != req.body.id){
+                           let friend = data[i]['friend'].find((friend)=>{
+                                return friend.userid == req.body.id && friend.isFriend;
+                            });
+                            if(friend != undefined){
+                                data[i]['friend'] = null;
+                            }
+                      }
+                      else data[i]['friend'] = undefined;
+
+
                 }
                 return res.json({status: "ok", res: data, imageData: avatars});
             }
@@ -600,7 +614,6 @@ function postDesiredGift(req, res) {
             createdAt: now,
             updatedAt: now,
         };
-        console.log(obj);
         Users.findOneAndUpdate({_id: body.id}, {"$push": {"post": obj}}, (err, data) => {
             if (err) return res.send(null);
             if (data) {
@@ -833,4 +846,164 @@ function showAllMarked(req, res){
             });
     }
     else res.send("please log in")
+}
+
+function getNewFriend(req, res){
+    var id = req.query.id;
+    if(auth(id)){
+        Users.aggregate([{$unwind: '$friend'},
+                         {$match: {'_id': mongoose.Types.ObjectId(id) ,"friend.isFriend": false}},
+                         {$count: "friend"} 
+                        ], (err, data)=>{
+            if(err) res.send(null)
+            if(data){
+                res.send({status: "ok", friends: data.length ? data[0].friend : 0})
+            }
+        });
+    }
+    else res.send("please log in")
+}
+function showFriend(req, res){
+    var id = req.query.id;
+   var imageData = {};
+   var type = req.query.type == 'old' ? true : false;
+    if(auth(id)){
+        Users.aggregate([
+            {$unwind: '$friend'},
+             {$match: {'_id': mongoose.Types.ObjectId(id), 'friend.isFriend': type}},
+            {$project: {
+                'friend': 1,
+                '_id': 0
+            }
+            }
+        ], (err, data)=>{
+            if(err) res.send(null)
+            if(data.length){
+                var listId = [];
+                for(let i = 0, len = data.length; i < len; i++){
+                    listId.push(data[i]['friend']['userid']);
+                }
+                if(listId.length > 0){
+                    Users.find({'_id': {$in: listId}}, "-_id avatar full_name", (err, avatars)=>{
+                        if(err) res.send(null)
+                        if(avatars){
+                            var image = null;
+                            for(let i = 0, len = avatars.length; i < len; i++){
+                                data[i]['friend']['name'] = avatars[i]['full_name']['fName'] + " " + avatars[i]['full_name']['lName']
+                                if(avatars[i]['avatar'] != "default"){
+                                     if(fs.existsSync(avatars[i]['avatar'])){
+                                          image = fs.readFileSync(avatars[i]['avatar']);
+                                           imageData[data[i]['friend']['userid']] = image;
+                                           data[i]['friend']['image'] = 'file'
+                                     }
+                                }
+                            }
+                            res.send({status: "ok", data: data, imageData: imageData})
+                        }
+                    })
+                }
+                else res.send(null)
+            }
+            else res.send(null)
+        })
+    }
+    else res.send('please log in')
+}
+
+function addFriend(req, res){
+    var id = req.body.id,
+        viewid = req.body.viewid;
+    if(id == viewid) return res.send(null);
+    obj = {
+        userid: id,
+        isFriend: false
+    }
+    if(auth(id)){
+        Users.update({_id: viewid, 'friend.userid': {$ne: id}}, {"$push": {"friend": obj}}, (err, data)=>{
+            if(err) res.send(null)
+            if(data.n){
+                 res.json({status: 'ok'});
+            }
+            else res.send(null)
+        })
+    }
+    else res.send('please log in')
+}
+                               
+    
+
+function confirmFriend(req, res){
+        var id = req.body.id,
+        viewid = req.body.viewid;
+    if(auth(id)){
+         Users.update({
+                    _id: id,
+                    "friend.userid": viewid
+               }, {"$set": {"friend.$.isFriend": true}}, (err, data)=>{
+            if(err) res.send(null)
+            if(data.n){
+                var obj = {
+                     userid: id,
+                    isFriend: true
+                }
+                Users.update({_id: viewid, 'friend.userid': {$ne: id}}, {"$push": {"friend": obj}}, (err, data)=>{
+                    if(err) res.send(null)
+                    if(!data.n){
+                         Users.update({_id: viewid, 'friend.userid': id}, {"$set": {"friend.$.isFriend": true}}, (err, data)=>{
+                            if(data.n)
+                                res.json({status: 'ok'});
+                            else res.send(null)
+                         })
+                    }
+                    else res.json({status: 'ok'});
+                })
+            }
+            else res.send(null)
+        })
+    }
+    else res.send('please log in')
+}
+
+function removeFriend(req, res){
+    var id = req.body.id,
+    viewid = req.body.viewid;
+    if(auth(id)){
+         Users.update({_id: id}, {"$pull": {"friend": {userid: viewid}}}, (err, data)=>{
+            if(err) res.send(null)
+            if(data.n){
+                 Users.update({_id: viewid}, {"$pull": {"friend": {userid: id}}}, (err, data)=>{
+                    if(err) res.send(null)
+                    if(data.n){
+                         res.json({status: 'ok'});
+                    }
+                    else res.send(null)
+                })
+            }
+            else res.send(null)
+        })
+    }
+    else res.send('please log in')
+}
+
+function rejectFriend(req, res){
+    var id = req.body.id,
+    viewid = req.body.viewid;
+    if(auth(id)){
+         Users.update({_id: id}, {"$pull": {"friend": {userid: viewid}}}, (err, data)=>{
+            if(err) res.send(null)
+            if(data.n){
+                Users.update({_id: viewid}, {"$pull": {"friend": {userid: id}}}, (err, data)=>{
+                    if(err) res.send(null)
+                    else res.json({status: 'ok'});
+                })
+            }
+            else res.send(null)
+        })
+    }
+    else res.send('please log in')
+}
+
+
+function p(obj){
+    console.log(obj)
 }
