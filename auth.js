@@ -222,7 +222,7 @@ app.post('/serverCheck', (req, res) => {
 app.post('/updatePersonalInfo', (req, res) => {
 if(auth(req.body.id)){
         var obj = {
-            rName: {
+            full_name: {
                 lName: req.body.lName,
                 fName: req.body.fName
             },
@@ -355,11 +355,11 @@ app.post('/searchUser', (req, res) => {
                 obj = {
                         $or :
                                 [
-                                     {"full_name.fName": {'$regex': '.*' + names[0]  + '.*'}},
-                                     {"full_name.lName": {'$regex': '.*' + names[0]  + '.*'}},
-                                     {"full_name.lName": {'$regex': '.*' + value + '.*'}},
-                                     {"full_name.fName": {'$regex': '.*' + value  + '.*'}},
-                                     {"full_name.lName": {'$regex': '.*' + names[1] + '.*'}},
+                                     {"full_name.fName": {'$regex': '.*' + names[0]  + '.*', '$options' : 'i'}},
+                                     {"full_name.lName": {'$regex': '.*' + names[0]  + '.*', '$options' : 'i'}},
+                                     {"full_name.lName": {'$regex': '.*' + value + '.*', '$options' : 'i'}},
+                                     {"full_name.fName": {'$regex': '.*' + value  + '.*', '$options' : 'i'}},
+                                     {"full_name.lName": {'$regex': '.*' + names[1] + '.*','$options' : 'i'}},
                                 ]
 
                       };
