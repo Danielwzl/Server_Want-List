@@ -46,6 +46,7 @@ var server = app.listen(process.env.PORT || 3002, (err) => {
         var port = server.address().port;
         console.log('sever started at localhost:%s', port);
         mongoose.connection.openUri(config.database); //connect to mongodb
+        generateMainFolder();
     }
 });
 
@@ -755,14 +756,19 @@ function generateUpdateData(body, column) {
     return stmt;
 }
 
-function generateUserDir(id) {
+function generateMainFolder(){
+    if (!fs.existsSync('./uploads/')) {
+        fs.mkdirSync('./uploads/');
+    }
     if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir);
     }
-    var tmpDir = dir + 'tmp/';
-    if (!fs.existsSync(dir + 'tmp/')) {
-        fs.mkdirSync(tmpDir);
-    }
+    if (!fs.existsSync(tempDir)) {
+            fs.mkdirSync(tempDir);
+        }
+}
+
+function generateUserDir(id) {
     var userDir = dir + id + '/';
     if (!fs.existsSync(userDir)) {
         fs.mkdirSync(userDir);
